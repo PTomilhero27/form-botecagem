@@ -11,8 +11,9 @@ import { PersonalInfoStep } from "./components/form/PersonalInfoStep";
 import { BankInfoStep } from "./components/form/BankInfoStep";
 import { EquipmentStep } from "./components/form/EquipmentStep";
 import { MenuStep } from "./components/form/MenuStep";
+import { SuccessStep } from "./components/steps/SuccessStep";
 
-type Step = "doc" | "form" | "personal" | "bank" | "equipment" | "menu";
+type Step = "doc" | "form" | "personal" | "bank" | "equipment" | "menu" | "success";
 
 export default function Page() {
   const [step, setStep] = useState<Step>("doc");
@@ -26,6 +27,7 @@ export default function Page() {
   const [bankData, setBankData] = useState<any>(null);
   const [equipmentData, setEquipmentData] = useState<any>(null);
   const [menuData, setMenuData] = useState<any>(null);
+  const [savedMerchantId, setSavedMerchantId] = useState<string | null>(null);
 
   async function handleDocConfirmed(doc: string) {
     try {
@@ -120,6 +122,7 @@ export default function Page() {
             <EquipmentStep
               onBack={() => setStep("bank")}
               onNext={(data) => {
+                console.log(data)
                 setEquipmentData(data);
                 setStep("menu");
               }}
@@ -133,20 +136,49 @@ export default function Page() {
 
             <MenuStep
               onBack={() => setStep("equipment")}
-              onNext={(data) => {
+              onNext={async (data) => {
                 setMenuData(data);
 
-                // aqui depois você salva tudo junto:
-                console.log("PERSONAL", personalData);
-                console.log("BANK", bankData);
-                console.log("EQUIPMENT", equipmentData);
-                console.log("MENU", data);
+                if (!vendorId) {
+                  alert("vendorId não encontrado. Volte e informe o documento novamente.");
+                  setStep("doc");
+                  return;
+                }
 
-                alert("Cardápio OK ✅ (próximo: enviar tudo)");
+                const payload = {
+                  vendorId,
+                  personalData,
+                  bankData,
+                  equipmentData, // ✅ agora vai
+                  menuData: data,
+                };
+
+                const res = await fetch("/api/onboarding/submit", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(payload),
+                });
+
+                const json = await res.json();
+
+                if (!res.ok) {
+                  alert(json?.error || "Erro ao salvar no Supabase");
+                  return;
+                }
+
+                setSavedMerchantId(json.merchantId); // ✅
+                setStep("success"); // ✅
               }}
             />
+
+
           </>
         )}
+
+
+        {step === "success" && <SuccessStep merchantId={savedMerchantId} />}
+
+
       </div>
     </main>
   );

@@ -29,7 +29,6 @@ export function ApprovedStep({
           onClick={onBack}
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2.5 font-semibold text-zinc-900 hover:bg-zinc-50"
         >
-          <ArrowLeft className="h-4 w-4" />
           Voltar
         </button>
 
@@ -38,7 +37,6 @@ export function ApprovedStep({
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-orange-600"
         >
           Continuar
-          <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </div>
