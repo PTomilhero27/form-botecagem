@@ -13,9 +13,9 @@ export type EquipmentForm = {
   items: EquipmentItem[];
   outlets110: number;
   outlets220: number;
-  otherOutletsLabel: string; // ex: "trifásico", "380v", "extensão"
+  otherOutletsLabel: string;
   otherOutletsQty: number;
-  notes: string; // opcional (mas você pode tornar obrigatório se quiser)
+  notes: string;
 };
 
 function uid() {
@@ -72,23 +72,44 @@ const SUGGESTIONS = [
   "Caixa de som",
 ];
 
+// ✅ helper: garante ids mesmo se vier do banco sem id
+function normalizeInitial(initial?: Partial<EquipmentForm>): EquipmentForm {
+  const items =
+    initial?.items?.length
+      ? initial.items.map((it) => ({
+          id: it.id || uid(),
+          name: it.name || "",
+          qty: Number.isFinite(it.qty) && it.qty >= 1 ? it.qty : 1,
+        }))
+      : [{ id: uid(), name: "", qty: 1 }];
+
+  return {
+    items,
+    outlets110: Number(initial?.outlets110 ?? 0) || 0,
+    outlets220: Number(initial?.outlets220 ?? 0) || 0,
+    otherOutletsLabel: String(initial?.otherOutletsLabel ?? ""),
+    otherOutletsQty: Number(initial?.otherOutletsQty ?? 0) || 0,
+    notes: String(initial?.notes ?? ""),
+  };
+}
+
 export function EquipmentStep({
+  initialData, // ✅ novo
   onBack,
   onNext,
 }: {
+  initialData?: Partial<EquipmentForm> | null;
   onBack: () => void;
   onNext: (data: EquipmentForm) => void;
 }) {
-  const [items, setItems] = useState<EquipmentItem[]>([
-    { id: uid(), name: "", qty: 1 },
-  ]);
+  const initial = useMemo(() => normalizeInitial(initialData ?? undefined), [initialData]);
 
-  const [outlets110, setOutlets110] = useState(0);
-  const [outlets220, setOutlets220] = useState(0);
-  const [otherOutletsLabel, setOtherOutletsLabel] = useState("");
-  const [otherOutletsQty, setOtherOutletsQty] = useState(0);
-
-  const [notes, setNotes] = useState("");
+  const [items, setItems] = useState<EquipmentItem[]>(initial.items);
+  const [outlets110, setOutlets110] = useState(initial.outlets110);
+  const [outlets220, setOutlets220] = useState(initial.outlets220);
+  const [otherOutletsLabel, setOtherOutletsLabel] = useState(initial.otherOutletsLabel);
+  const [otherOutletsQty, setOtherOutletsQty] = useState(initial.otherOutletsQty);
+  const [notes, setNotes] = useState(initial.notes);
 
   const totalEquipQty = useMemo(
     () => items.reduce((acc, it) => acc + (Number.isFinite(it.qty) ? it.qty : 0), 0),
@@ -101,14 +122,11 @@ export function EquipmentStep({
   );
 
   function addItem(preset?: string) {
-    setItems((prev) => [
-      ...prev,
-      { id: uid(), name: preset ?? "", qty: 1 },
-    ]);
+    setItems((prev) => [...prev, { id: uid(), name: preset ?? "", qty: 1 }]);
   }
 
   function removeItem(id: string) {
-    setItems((prev) => prev.length <= 1 ? prev : prev.filter((x) => x.id !== id));
+    setItems((prev) => (prev.length <= 1 ? prev : prev.filter((x) => x.id !== id)));
   }
 
   function updateItem(id: string, patch: Partial<EquipmentItem>) {
@@ -116,7 +134,6 @@ export function EquipmentStep({
   }
 
   function validate(): string | null {
-    // Equipamentos (obrigatório pelo menos 1, com nome e qty >= 1)
     if (!items.length) return "Adicione pelo menos 1 equipamento.";
 
     for (const it of items) {
@@ -124,10 +141,8 @@ export function EquipmentStep({
       if (!Number.isFinite(it.qty) || it.qty < 1) return "Quantidade do equipamento deve ser 1 ou mais.";
     }
 
-    // Tomadas: precisa ter pelo menos 1 tomada informada (110, 220 ou outras)
     if (totalOutlets < 1) return "Informe a quantidade de tomadas (110, 220 ou outras).";
 
-    // Se informou outras tomadas, precisa dizer qual
     if (otherOutletsQty > 0 && !required(otherOutletsLabel)) {
       return "Você informou 'outras tomadas'. Diga qual (ex: trifásico, 380v, extensão).";
     }
@@ -158,7 +173,6 @@ export function EquipmentStep({
         </p>
       </div>
 
-      {/* Resumo */}
       <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50/50 p-4">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="inline-flex items-center gap-2 font-semibold text-zinc-900">
@@ -169,23 +183,17 @@ export function EquipmentStep({
           <span className="inline-flex items-center gap-2 font-semibold text-zinc-900">
             <Zap className="h-4 w-4 text-orange-600" />
             Tomadas: 110={outlets110 || 0} • 220={outlets220 || 0}
-            {otherOutletsQty > 0 ? ` • ${otherOutletsLabel || "Outras"}=${otherOutletsQty}` : ""}
-            {" "} (Total: {totalOutlets})
+            {otherOutletsQty > 0 ? ` • ${otherOutletsLabel || "Outras"}=${otherOutletsQty}` : ""}{" "}
+            (Total: {totalOutlets})
           </span>
         </div>
       </div>
 
-      {/* Sugestões rápidas */}
       <div className="mb-4">
         <div className="text-sm font-semibold text-zinc-900">Sugestões rápidas</div>
         <div className="mt-2 flex flex-wrap gap-2">
           {SUGGESTIONS.slice(0, 10).map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={chipCls(false)}
-              onClick={() => addItem(s)}
-            >
+            <button key={s} type="button" className={chipCls(false)} onClick={() => addItem(s)}>
               <Plus className="h-4 w-4 text-orange-600" />
               {s}
             </button>
@@ -193,7 +201,6 @@ export function EquipmentStep({
         </div>
       </div>
 
-      {/* Lista de equipamentos */}
       <div className="rounded-2xl border border-zinc-200 p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="text-sm font-semibold text-zinc-900">
@@ -263,7 +270,6 @@ export function EquipmentStep({
         </div>
       </div>
 
-      {/* Tomadas */}
       <div className="mt-5 rounded-2xl border border-zinc-200 p-4">
         <div className="mb-3 text-sm font-semibold text-zinc-900">
           Tomadas necessárias <span className="text-red-600">*</span>
@@ -323,23 +329,16 @@ export function EquipmentStep({
         </div>
       </div>
 
-      {/* Observações (opcional) */}
       <div className="mt-5">
-        <label className="text-sm font-semibold text-zinc-900">
-          Observações (opcional)
-        </label>
+        <label className="text-sm font-semibold text-zinc-900">Observações (opcional)</label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Se precisar de algo específico, descreva aqui."
-          className={[
-            inputCls("mt-2"),
-            "min-h-[96px] resize-none",
-          ].join(" ")}
+          className={[inputCls("mt-2"), "min-h-[96px] resize-none"].join(" ")}
         />
       </div>
 
-      {/* Actions */}
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           onClick={onBack}

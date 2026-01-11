@@ -49,7 +49,6 @@ function max40(v: string) {
 }
 
 function moneyToNumber(v: string) {
-  // aceita "12,50", "12.50", "1.234,56"
   const cleaned = (v || "")
     .trim()
     .replace(/\s/g, "")
@@ -81,14 +80,29 @@ function getElFromPoint(x: number, y: number) {
 /* ------------------ Main ------------------ */
 
 export function MenuStep({
+  initialData,
   onBack,
   onNext,
 }: {
+  initialData?: MenuForm | null;
   onBack: () => void;
   onNext: (data: MenuForm) => void;
 }) {
-  const [machinesMode, setMachinesMode] = useState<"2" | "3" | "other">("2");
-  const [machinesOther, setMachinesOther] = useState<string>("");
+  // init machines
+  const initialMachinesMode = (() => {
+    const n = Number(initialData?.machinesQty ?? 2);
+    if (n === 2) return "2";
+    if (n === 3) return "3";
+    return "other";
+  })() as "2" | "3" | "other";
+
+  const initialMachinesOther = (() => {
+    const n = Number(initialData?.machinesQty ?? 2);
+    return n !== 2 && n !== 3 ? String(n || "") : "";
+  })();
+
+  const [machinesMode, setMachinesMode] = useState<"2" | "3" | "other">(() => initialMachinesMode);
+  const [machinesOther, setMachinesOther] = useState<string>(() => initialMachinesOther);
 
   const machinesQty: MachinesQty = useMemo(() => {
     if (machinesMode === "2") return 2;
@@ -97,7 +111,9 @@ export function MenuStep({
     return Number.isFinite(n) ? n : 0;
   }, [machinesMode, machinesOther]);
 
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>(
+    () => initialData?.categories ?? []
+  );
 
   // menu "..." por categoria
   const [catMenuOpenId, setCatMenuOpenId] = useState<string | null>(null);
@@ -211,10 +227,8 @@ export function MenuStep({
       const priceN = moneyToNumber(d.price);
 
       if (!required(name)) return alert("Preencha o nome do produto.");
-      if (!max40(name))
-        return alert(`Nome do produto deve ter no máximo 40 caracteres: "${name}"`);
-      if (!Number.isFinite(priceN) || priceN <= 0)
-        return alert("Preencha um valor válido (ex: 12,50).");
+      if (!max40(name)) return alert(`Nome do produto deve ter no máximo 40 caracteres: "${name}"`);
+      if (!Number.isFinite(priceN) || priceN <= 0) return alert("Preencha um valor válido (ex: 12,50).");
 
       normalized.push({ id: uid(), name, price: priceN });
     }
@@ -249,8 +263,7 @@ export function MenuStep({
 
     if (!required(name)) return alert("Preencha o nome do produto.");
     if (!max40(name)) return alert("Nome do produto deve ter no máximo 40 caracteres.");
-    if (!Number.isFinite(priceN) || priceN <= 0)
-      return alert("Preencha um valor válido (ex: 12,50).");
+    if (!Number.isFinite(priceN) || priceN <= 0) return alert("Preencha um valor válido (ex: 12,50).");
 
     setCategories((prev) =>
       prev.map((c) =>
@@ -289,7 +302,7 @@ export function MenuStep({
     setDeleteProdOpen(false);
   }
 
-  /* ------------------ Drag logic (categories) ------------------ */
+  /* ------------------ Drag (categories) ------------------ */
 
   function startDragCategory(pointerId: number, fromIndex: number, target: HTMLElement) {
     closeAllMenus();
@@ -300,9 +313,7 @@ export function MenuStep({
   function moveDragCategory(clientX: number, clientY: number) {
     setDrag((d) => {
       if (!d || d.type !== "category") return d;
-      const el = getElFromPoint(clientX, clientY)?.closest("[data-cat-index]") as
-        | HTMLElement
-        | null;
+      const el = getElFromPoint(clientX, clientY)?.closest("[data-cat-index]") as HTMLElement | null;
       if (!el) return d;
       const over = Number(el.dataset.catIndex);
       if (!Number.isFinite(over)) return d;
@@ -321,14 +332,9 @@ export function MenuStep({
     setDrag(null);
   }
 
-  /* ------------------ Drag logic (products) ------------------ */
+  /* ------------------ Drag (products) ------------------ */
 
-  function startDragProduct(
-    pointerId: number,
-    catId: string,
-    fromIndex: number,
-    target: HTMLElement
-  ) {
+  function startDragProduct(pointerId: number, catId: string, fromIndex: number, target: HTMLElement) {
     closeAllMenus();
     target.setPointerCapture(pointerId);
     setDrag({ type: "product", catId, fromIndex, overIndex: fromIndex });
@@ -339,9 +345,7 @@ export function MenuStep({
       if (!d || d.type !== "product") return d;
       if (d.catId !== catId) return d;
 
-      const row = getElFromPoint(clientX, clientY)?.closest("[data-prod-index]") as
-        | HTMLElement
-        | null;
+      const row = getElFromPoint(clientX, clientY)?.closest("[data-prod-index]") as HTMLElement | null;
       if (!row) return d;
       if (row.dataset.prodCat !== catId) return d;
 
@@ -411,24 +415,9 @@ export function MenuStep({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <RadioCard
-            checked={machinesMode === "2"}
-            onClick={() => setMachinesMode("2")}
-            title="2"
-            subtitle="2 terminais"
-          />
-          <RadioCard
-            checked={machinesMode === "3"}
-            onClick={() => setMachinesMode("3")}
-            title="3"
-            subtitle="3 terminais"
-          />
-          <RadioCard
-            checked={machinesMode === "other"}
-            onClick={() => setMachinesMode("other")}
-            title="Outro"
-            subtitle="Definir manualmente"
-          />
+          <RadioCard checked={machinesMode === "2"} onClick={() => setMachinesMode("2")} title="2" subtitle="2 terminais" />
+          <RadioCard checked={machinesMode === "3"} onClick={() => setMachinesMode("3")} title="3" subtitle="3 terminais" />
+          <RadioCard checked={machinesMode === "other"} onClick={() => setMachinesMode("other")} title="Outro" subtitle="Definir manualmente" />
         </div>
 
         {machinesMode === "other" && (
@@ -482,7 +471,6 @@ export function MenuStep({
               {/* Header categoria */}
               <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-2">
-                  {/* Drag handle categoria */}
                   <button
                     type="button"
                     className="touch-none rounded-lg p-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700"
@@ -520,16 +508,8 @@ export function MenuStep({
 
                   {catMenuOpenId === cat.id && (
                     <div className="absolute right-0 z-10 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
-                      <MenuItem
-                        icon={<Pencil className="h-4 w-4" />}
-                        label="Editar categoria"
-                        onClick={() => openEditCategory(cat.id)}
-                      />
-                      <MenuItem
-                        icon={<PackagePlus className="h-4 w-4" />}
-                        label="Adicionar produto"
-                        onClick={() => openAddProducts(cat.id)}
-                      />
+                      <MenuItem icon={<Pencil className="h-4 w-4" />} label="Editar categoria" onClick={() => openEditCategory(cat.id)} />
+                      <MenuItem icon={<PackagePlus className="h-4 w-4" />} label="Adicionar produto" onClick={() => openAddProducts(cat.id)} />
                       <MenuItem
                         icon={<Trash2 className="h-4 w-4 text-red-600" />}
                         label={<span className="text-red-600">Excluir categoria</span>}
@@ -561,24 +541,16 @@ export function MenuStep({
                           data-prod-cat={cat.id}
                           className={[
                             "flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition",
-                            isOverProd
-                              ? "border-orange-400 bg-orange-50/40"
-                              : "border-zinc-200 bg-white",
+                            isOverProd ? "border-orange-400 bg-orange-50/40" : "border-zinc-200 bg-white",
                           ].join(" ")}
                         >
                           <div className="flex min-w-0 items-start gap-2">
-                            {/* Drag handle produto */}
                             <button
                               type="button"
                               className="touch-none rounded-lg p-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700"
                               aria-label="Arrastar produto"
                               onPointerDown={(e) =>
-                                startDragProduct(
-                                  e.pointerId,
-                                  cat.id,
-                                  pIdx,
-                                  e.currentTarget as HTMLElement
-                                )
+                                startDragProduct(e.pointerId, cat.id, pIdx, e.currentTarget as HTMLElement)
                               }
                               onPointerMove={(e) => {
                                 if (!drag || drag.type !== "product") return;
@@ -599,9 +571,7 @@ export function MenuStep({
                                   ({p.name.length}/40)
                                 </span>
                               </div>
-                              <div className="mt-0.5 text-xs text-zinc-600">
-                                {formatMoneyBR(p.price)}
-                              </div>
+                              <div className="mt-0.5 text-xs text-zinc-600">{formatMoneyBR(p.price)}</div>
                             </div>
                           </div>
 
@@ -879,11 +849,7 @@ function Modal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <button
-        className="absolute inset-0 bg-black/40"
-        aria-label="Fechar modal"
-        onClick={onClose}
-      />
+      <button className="absolute inset-0 bg-black/40" aria-label="Fechar modal" onClick={onClose} />
 
       <div className="relative z-10 w-[92vw] max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
         <div className="flex items-start justify-between gap-3">
@@ -922,11 +888,7 @@ function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <button
-        className="absolute inset-0 bg-black/40"
-        aria-label="Fechar modal"
-        onClick={onClose}
-      />
+      <button className="absolute inset-0 bg-black/40" aria-label="Fechar modal" onClick={onClose} />
 
       <div className="relative z-10 w-[92vw] max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
         <div className="flex items-start gap-3">

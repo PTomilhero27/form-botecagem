@@ -6,8 +6,19 @@ export type VendorStatus =
   | "desistente";
 
 export type VendorLookupResponse =
-  | { ok: true; vendor: { vendor_id: string; status: VendorStatus }; canContinue: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      vendor: {
+        vendor_id: string;
+        status: string;
+        merchant_id: string | null;
+        equipment_profile_id: string | null;
+      };
+      canContinue: boolean;
+      mode: "create" | "edit";
+    };
+
 
 export const STATUS_UI: Record<VendorStatus, { label: string; cls: string }> = {
   selecionado: {

@@ -9,7 +9,12 @@ import type { VendorLookupResponse } from "@/types/vendor";
 export function DocumentLookupStep({
   onContinue,
 }: {
-  onContinue: (vendorId: string) => void;
+  onContinue: (
+    vendorId: string,
+    merchantId: string | null,
+    equipmentProfileId: string | null,
+    mode: "create" | "edit"
+  ) => void;
 }) {
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,7 +39,6 @@ export function DocumentLookupStep({
 
     setLoading(true);
     try {
-      // ✅ use a rota correta
       const res = await fetch("/api/vendor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,8 +85,12 @@ export function DocumentLookupStep({
         onClose={backToEntry}
         result={result}
         onContinue={(vendorId) => {
+          const merchantId = result?.ok ? result.vendor.merchant_id : null;
+          const equipmentProfileId = result?.ok ? result.vendor.equipment_profile_id : null;
+          const mode = result?.ok ? result.mode : "create";
+
           setConfirmOpen(false);
-          onContinue(vendorId);
+          onContinue(vendorId, merchantId, equipmentProfileId, mode);
         }}
       />
     </>

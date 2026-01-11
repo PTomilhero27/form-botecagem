@@ -1,14 +1,18 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 export function ApprovedStep({
+  mode,
   onBack,
   onContinue,
 }: {
+  mode: "create" | "edit";
   onBack: () => void;
   onContinue: () => void;
 }) {
+  const isEdit = mode === "edit";
+
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="flex items-start gap-3">
@@ -17,9 +21,21 @@ export function ApprovedStep({
         </div>
 
         <div className="flex-1">
-          <h2 className="text-lg font-bold text-zinc-900">Confirmado</h2>
+          <h2 className="text-lg font-bold text-zinc-900">
+            {isEdit ? "Cadastro encontrado" : "Confirmado"}
+          </h2>
+
           <p className="mt-1 text-sm text-zinc-600">
-            Seu cadastro foi validado. Clique em <b>Continuar</b> para preencher o formulário.
+            {isEdit ? (
+              <>
+                Encontramos um cadastro existente. Clique em <b>Continuar</b> para{" "}
+                <b>editar</b> suas informações.
+              </>
+            ) : (
+              <>
+                Seu cadastro foi validado. Clique em <b>Continuar</b> para preencher o formulário.
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -36,7 +52,7 @@ export function ApprovedStep({
           onClick={onContinue}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-orange-600"
         >
-          Continuar
+          {isEdit ? "Editar cadastro" : "Continuar"}
         </button>
       </div>
     </div>

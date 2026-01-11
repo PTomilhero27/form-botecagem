@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { SheetRow } from "@/types/sheet";
 import { Mail, Phone, MapPin, Store, User } from "lucide-react";
 
-type PersonalForm = {
+export type PersonalForm = {
   personType: "PF" | "PJ";
 
   cpfCnpj: string;
@@ -15,13 +15,11 @@ type PersonalForm = {
 
   pdvName: string;
 
-  // guardamos separado (pra salvar certinho)
   addressFull: string;
   addressZipcode: string;
   addressCity: string;
   addressState: string;
 
-  // mas mostramos junto (UX)
   addressCombined: string;
 };
 
@@ -64,17 +62,18 @@ function buildAddressCombined(row?: {
 export function PersonalInfoStep({
   vendorId,
   sheetRow,
+  initialData, // ✅ novo
   onBack,
   onNext,
 }: {
   vendorId: string;
   sheetRow: SheetRow | null;
+  initialData?: PersonalForm | null; // ✅ novo
   onBack: () => void;
   onNext: (data: PersonalForm) => void;
 }) {
-  const prefill = useMemo(() => {
+  const prefill = useMemo<PersonalForm>(() => {
     const personType = pickPersonType(sheetRow);
-
     const cpfCnpj = vendorId || "";
 
     const fullName =
@@ -117,37 +116,11 @@ export function PersonalInfoStep({
     };
   }, [sheetRow, vendorId]);
 
-  const [form, setForm] = useState<PersonalForm>({
-    personType: prefill.personType,
-    cpfCnpj: prefill.cpfCnpj,
-    fullName: prefill.fullName,
-    email: prefill.email,
-    phone: prefill.phone,
-    pdvName: prefill.pdvName,
-
-    addressFull: prefill.addressFull,
-    addressZipcode: prefill.addressZipcode,
-    addressCity: prefill.addressCity,
-    addressState: prefill.addressState,
-    addressCombined: prefill.addressCombined,
-  });
+  // ✅ se tiver draft, usa ele; senão usa prefill
+  const [form, setForm] = useState<PersonalForm>(() => initialData ?? prefill);
 
   const disabled = {
-    // personType não editável
-    personType: true,
     cpfCnpj: true,
-
-    pdvName: !!prefill.pdvName,
-    fullName: !!prefill.fullName,
-    email: !!prefill.email,
-    phone: !!prefill.phone,
-
-    // se já temos tudo de endereço, trava o campo combinado
-    addressCombined:
-      !!prefill.addressFull &&
-      !!prefill.addressZipcode &&
-      !!prefill.addressCity &&
-      !!prefill.addressState,
   };
 
   function update<K extends keyof PersonalForm>(key: K, value: PersonalForm[K]) {
@@ -161,11 +134,8 @@ export function PersonalInfoStep({
     if (!required(form.email)) return "Preencha o e-mail.";
     if (!required(form.phone)) return "Preencha o contato.";
 
-    // endereço: se for editável, o combinado é obrigatório
     if (!required(form.addressCombined)) return "Preencha o endereço completo.";
 
-    // se você quiser obrigar os separados também, checa:
-    // (quando vier da planilha eles já vêm cheios)
     if (!required(form.addressFull)) return "Endereço inválido.";
     if (!required(form.addressCity)) return "Cidade inválida.";
     if (!required(form.addressState)) return "Estado inválido.";
@@ -176,14 +146,10 @@ export function PersonalInfoStep({
 
   function handleNext() {
     const err = validate();
-    if (err) {
-      alert(err);
-      return;
-    }
-    onNext(form);
+    if (err) return alert(err);
+    onNext(form); // ✅ manda form completo (vira draft no Page)
   }
 
-  // Badge PF/PJ
   const badge =
     form.personType === "PJ"
       ? { label: "PJ", cls: "bg-sky-50 text-sky-700 ring-sky-200" }
@@ -195,7 +161,7 @@ export function PersonalInfoStep({
         <div>
           <h2 className="text-lg font-bold text-zinc-900">Info pessoal</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Os dados já encontrados foram preenchidos.
+            Revise e edite os dados, se necessário. (CPF/CNPJ não pode mudar)
           </p>
         </div>
 
@@ -211,26 +177,22 @@ export function PersonalInfoStep({
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {/* PDV grande */}
-        <Field label="Nome do ponto de venda" icon={<Store className="h-4 w-4" />} disabled={disabled.pdvName}>
+        <Field label="Nome do ponto de venda" icon={<Store className="h-4 w-4" />}>
           <input
             value={form.pdvName}
             onChange={(e) => update("pdvName", e.target.value)}
-            disabled={disabled.pdvName}
             placeholder="Ex: Sambatata"
-            className={inputCls(disabled.pdvName, "text-base")}
+            className={inputCls(false, "text-base")}
           />
         </Field>
 
-        {/* Nome | CPF */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Nome" icon={<User className="h-4 w-4" />} disabled={disabled.fullName}>
+          <Field label="Nome" icon={<User className="h-4 w-4" />}>
             <input
               value={form.fullName}
               onChange={(e) => update("fullName", e.target.value)}
-              disabled={disabled.fullName}
               placeholder="Digite seu nome"
-              className={inputCls(disabled.fullName)}
+              className={inputCls(false)}
             />
           </Field>
 
@@ -239,56 +201,37 @@ export function PersonalInfoStep({
           </Field>
         </div>
 
-        {/* Email | Contato */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="E-mail" icon={<Mail className="h-4 w-4" />} disabled={disabled.email}>
+          <Field label="E-mail" icon={<Mail className="h-4 w-4" />}>
             <input
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
-              disabled={disabled.email}
               placeholder="ex: contato@expositor.com"
-              className={inputCls(disabled.email)}
+              className={inputCls(false)}
             />
           </Field>
 
-          <Field label="Contato" icon={<Phone className="h-4 w-4" />} disabled={disabled.phone}>
+          <Field label="Contato" icon={<Phone className="h-4 w-4" />}>
             <input
               value={form.phone}
               onChange={(e) => update("phone", e.target.value)}
-              disabled={disabled.phone}
               placeholder="(11) 99999-9999"
-              className={inputCls(disabled.phone)}
+              className={inputCls(false)}
             />
           </Field>
         </div>
 
-        {/* Endereço em um campo só */}
-        <Field
-          label="Endereço completo"
-          icon={<MapPin className="h-4 w-4" />}
-          disabled={disabled.addressCombined}
-        >
+        <Field label="Endereço completo" icon={<MapPin className="h-4 w-4" />}>
           <input
             value={form.addressCombined}
             onChange={(e) => {
-              update("addressCombined", e.target.value);
-
-              // se o usuário editar manualmente (quando não veio da planilha),
-              // aqui dá pra decidir como salvar:
-              // - você pode salvar tudo em addressFull e deixar os outros vazios
-              // - ou criar um parse (não recomendo agora)
-              update("addressFull", e.target.value);
+              const v = e.target.value;
+              update("addressCombined", v);
+              update("addressFull", v); // simples (sem parse)
             }}
-            disabled={disabled.addressCombined}
             placeholder="Rua, número • Cidade - UF • CEP 00000-000"
-            className={inputCls(disabled.addressCombined)}
+            className={inputCls(false)}
           />
-
-          {!disabled.addressCombined && (
-            <p className="mt-2 text-xs text-zinc-500">
-              Informe tudo no mesmo campo (endereço, cidade/UF e CEP).
-            </p>
-          )}
         </Field>
       </div>
 

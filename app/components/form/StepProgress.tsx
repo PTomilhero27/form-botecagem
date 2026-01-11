@@ -2,13 +2,14 @@
 
 import { Check } from "lucide-react";
 
-export type StepKey = "personal" | "bank" | "equipment" | "menu";
+export type StepKey = "personal" | "bank" | "equipment" | "menu" | "banner";
 
 const STEPS: { key: StepKey; label: string }[] = [
   { key: "personal", label: "Info pessoal" },
   { key: "bank", label: "Info bancária" },
   { key: "equipment", label: "Equipamentos" },
   { key: "menu", label: "Cardápio" },
+  { key: "banner", label: "Banner" },
 ];
 
 export function StepProgress({ current }: { current: StepKey }) {
