@@ -17,9 +17,9 @@ function required(v: string) {
 
 /** 1) Caminho das imagens */
 const TENT_IMAGES: Record<BannerForm["tentModel"], string> = {
-  "2x2": "/barracas/barraca-2x2.png",
-  "3x3": "/barracas/barraca-3x3.png",
-  "3x6": "/barracas/barraca-3x6.png",
+  "2x2": "/barracas/Barraca-2x2.png",
+  "3x3": "/barracas/Barraca-3x3.png",
+  "3x6": "/barracas/Barraca-3x6.png",
 };
 
 /**
