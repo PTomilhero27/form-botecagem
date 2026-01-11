@@ -11,7 +11,7 @@ export type VendorLookupResponse =
       ok: true;
       vendor: {
         vendor_id: string;
-        status: string;
+        status: VendorStatus; 
         merchant_id: string | null;
         equipment_profile_id: string | null;
       };
