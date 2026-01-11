@@ -277,7 +277,15 @@ export async function POST(req: Request) {
     let bannerProfileId: string | null = null;
 
     if (bannerData) {
-      const bannerName = String(bannerData.bannerName ?? bannerData.text ?? "").trim();
+      const bannerName = String(
+        (bannerData as any).banner_name ??
+        (bannerData as any).bannerName ??
+        bannerData.text ??
+        ""
+      ).trim();
+
+
+
       const theme = String(bannerData.theme ?? "classic").trim();
       const accent = String(bannerData.accent ?? "orange").trim();
 
